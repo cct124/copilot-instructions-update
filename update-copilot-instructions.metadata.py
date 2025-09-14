@@ -94,13 +94,6 @@ class MetadataUpdater:
         updated_metadata = {
             "doc_revision": new_revision,
             "range_start_commit": current_commit_info["commit"],
-            "last_update": {
-                "commit": current_commit_info["commit"],
-                "author_name": current_commit_info["author_name"],
-                "author_email": current_commit_info["author_email"],
-                "datetime": current_commit_info["datetime"],
-                "branch": current_commit_info["branch"],
-            },
         }
 
         return updated_metadata
