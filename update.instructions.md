@@ -17,6 +17,6 @@
 - 避免通用建议（如“编写测试”、“处理错误”）——聚焦于本项目特有方案
 - 仅记录可发现的模式，而非理想化实践
 - 引用体现重要模式的關鍵文件/目录
-- 文档更新后运行 `update-copilot-instructions.metadata.py` 刷新元数据（兼容旧文件名）。
+- 文档更新后运行 `.github/copilot-instructions-update/history-commits.py` 刷新元数据（兼容旧文件名）。
 
 完成`.github/copilot-instructions.md`更新后，请就任何不明确或不完整的部分征求用户反馈以进行迭代优化。
