@@ -10,10 +10,10 @@
 快速使用：
 
 - 分析最近 50 次提交（自动选择起点）
-	- 运行后在控制台查看摘要
+  - 运行后在控制台查看摘要
 
 - 指定起始提交并保存到文件
-	- 将摘要保存为 `.github/latest-changes.md`
+  - 将摘要保存为 `.github/latest-changes.md`
 
 元数据文件：`.github/copilot-instructions.metadata.json`
 
@@ -25,5 +25,6 @@
 
 - 将 `.github/copilot-instructions.md` 作为 AI 代理的“入门地图”，描述项目特有模式与工作流。
 - 每次更新完该文档后，运行元数据更新脚本，保持提交范围准确。
+- 克隆进仓库时不想把它当子模块提交，可以把它从索引移，使用指令`git rm --cached .github/copilot-instructions-update`
 
 许可：MIT License
