@@ -11,7 +11,7 @@
 
 编写指南（详见https://aka.ms/vscode-instructions-docs）：
 
-- 若存在`.github/copilot-instructions.md`文件，通过 `.github/copilot-instructions.metadata.json` 中的`range_start_commit`值，运行脚本`history-commits.py --output .github/latest-changes.md`获取“自上次更新以来”的提交列表，读取文件`.github/latest-changes.md`分析提交的消息和提交所影响的文件，必要时直接读取代码库中发生变更的代码，智能分析代码库发生的变更。智能合并内容——保留有价值部分的同时更新过时章节需智能合并内容。
+- 若存在`.github/copilot-instructions.md`文件，通过 `.github/copilot-instructions.metadata.json` 中的`range_start_commit`值，运行脚本`python3 .github/copilot-instructions-update/history-commits.py --output .github/latest-changes.md`获取“自上次更新以来”的提交列表，读取文件`.github/latest-changes.md`分析提交的消息和提交所影响的文件，必要时直接读取代码库中发生变更的代码，智能分析代码库发生的变更。智能合并内容——保留有价值部分的同时更新过时章节需智能合并内容。
 - 使用 Markdown 结构编写简洁可操作的指南（约 20-50 行）
 - 描述模式时包含代码库中的具体示例
 - 避免通用建议（如“编写测试”、“处理错误”）——聚焦于本项目特有方案
