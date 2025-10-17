@@ -9,11 +9,10 @@
 
 快速使用：
 
-- 分析最近 50 次提交（自动选择起点）
-  - 运行后在控制台查看摘要
-
-- 指定起始提交并保存到文件
-  - 将摘要保存为 `.github/latest-changes.md`
+1. 先使用Copilot生成指令生成`.github/copilot-instructions.md`
+2. 克隆该仓库到`.github/`下
+3. 项目正常更新迭代
+4. 将`update.instructions.md`发送AI代理，AI代理将自动进行更新`.github/copilot-instructions.md`操作
 
 元数据文件：`.github/copilot-instructions.metadata.json`
 
