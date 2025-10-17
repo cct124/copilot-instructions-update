@@ -10,10 +10,10 @@
 快速使用：
 
 - 分析最近 50 次提交（自动选择起点）
-	- 运行后在控制台查看摘要
+  - 运行后在控制台查看摘要
 
 - 指定起始提交并保存到文件
-	- 将摘要保存为 `.github/latest-changes.md`
+  - 将摘要保存为 `.github/latest-changes.md`
 
 元数据文件：`.github/copilot-instructions.metadata.json`
 
