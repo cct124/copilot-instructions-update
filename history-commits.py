@@ -368,12 +368,9 @@ class GitCommitAnalyzer:
             if analysis['files']:
                 summary_lines.append("**变更文件**:")
                 summary_lines.append("")
-                for file_info in analysis['files'][:10]:  # 限制显示文件数量
+                for file_info in analysis['files']:
                     summary_lines.append(f"- {file_info['action']}: `{file_info['path']}`")
-                
-                if len(analysis['files']) > 10:
-                    summary_lines.append(f"- ... 还有 {len(analysis['files']) - 10} 个文件")
-                
+
                 summary_lines.append("")
         
         return '\n'.join(summary_lines)
