@@ -155,16 +155,15 @@ class MetadataUpdater:
         print("\n" + "=" * 50)
         print("元数据更新信息")
         print("=" * 50)
-
-    old_revision = old_metadata.get("doc_revision", 0)
+        old_revision = old_metadata.get("doc_revision", 0)
         new_revision = new_metadata["doc_revision"]
-    last_update = new_metadata.get("last_update", {})
+        last_update = new_metadata.get("last_update", {})
 
-    print(f"文档版本: {old_revision} → {new_revision}")
-    print(f"起始提交: {new_metadata['range_start_commit'][:8]}...")
-    print(f"更新作者: {last_update.get('author', {}).get('name', 'N/A')}")
-    print(f"更新时间: {last_update.get('datetime', 'N/A')}")
-    print(f"当前分支: {last_update.get('branch', 'N/A')}")
+        print(f"文档版本: {old_revision} → {new_revision}")
+        print(f"起始提交: {new_metadata['range_start_commit'][:8]}...")
+        print(f"更新作者: {last_update.get('author', {}).get('name', 'N/A')}")
+        print(f"更新时间: {last_update.get('datetime', 'N/A')}")
+        print(f"当前分支: {last_update.get('branch', 'N/A')}")
 
     def create_commit(self, message: str) -> None:
         """创建一个新的提交包含元数据更新
