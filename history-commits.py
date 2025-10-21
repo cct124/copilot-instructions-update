@@ -20,19 +20,18 @@ import sys
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Any, Optional
-import re
 
 class GitCommitAnalyzer:
     def __init__(self, repo_path: str = "."):
         """初始化Git提交分析器
-        
+
         Args:
             repo_path: Git仓库路径，默认为当前目录
         """
         self.repo_path = Path(repo_path)
         self.metadata_file = self.repo_path / ".github" / "copilot-instructions.metadata.json"
         self.copilot_instructions_file = self.repo_path / ".github" / "copilot-instructions.md"
-        
+
     def load_metadata(self) -> Optional[Dict[str, Any]]:
         """加载copilot-instructions的元数据（如果可用）"""
         try:
@@ -111,10 +110,10 @@ class GitCommitAnalyzer:
 
     def get_commit_files(self, commit_hash: str) -> List[Dict[str, str]]:
         """获取指定提交涉及的文件变更
-        
+
         Args:
             commit_hash: 提交hash
-            
+
         Returns:
             文件变更列表，包含状态（A/M/D）和文件路径
         """
@@ -124,19 +123,30 @@ class GitCommitAnalyzer:
             "--format=",
             commit_hash
         ])
-        
+
         files = []
         for line in files_output.split('\n'):
             if line.strip():
-                parts = line.split('\t', 1)
-                if len(parts) == 2:
-                    status, filepath = parts
-                    files.append({
-                        'status': status,
-                        'path': filepath,
-                        'action': self._get_action_description(status)
-                    })
-        
+                parts = line.split('\t')
+                if len(parts) >= 2:
+                    status = parts[0]
+                    # R 或 C 重命名/复制会包含旧/新路径
+                    if status.startswith(('R', 'C')) and len(parts) == 3:
+                        old_path, new_path = parts[1], parts[2]
+                        files.append({
+                            'status': status,
+                            'path': new_path,
+                            'old_path': old_path,
+                            'action': self._get_action_description(status)
+                        })
+                    else:
+                        filepath = parts[1]
+                        files.append({
+                            'status': status,
+                            'path': filepath,
+                            'action': self._get_action_description(status)
+                        })
+
         return files
 
     def _get_action_description(self, status: str) -> str:
@@ -167,11 +177,11 @@ class GitCommitAnalyzer:
 
     def analyze_commit_impact(self, commit: Dict[str, Any], files: List[Dict[str, str]]) -> Dict[str, Any]:
         """分析单个提交的影响
-        
+
         Args:
             commit: 提交信息
             files: 该提交涉及的文件列表
-            
+
         Returns:
             提交影响分析结果
         """
@@ -182,16 +192,16 @@ class GitCommitAnalyzer:
             'impact_summary': '',
             'key_changes': []
         }
-        
+
         # 分析文件类型和影响范围
         categories = set()
         key_changes = []
-        
+
         for file_info in files:
             filepath = file_info['path']
             status = file_info['status']
             action = file_info['action']
-            
+
             # 通用文件类型分类（不依赖特定项目结构）
             if filepath.endswith(('.py', '.js', '.ts', '.java', '.cs', '.cpp', '.c', '.h')):
                 categories.add('源代码')
@@ -209,6 +219,8 @@ class GitCommitAnalyzer:
                 categories.add('协议定义')
             elif filepath.startswith('.github/'):
                 categories.add('CI/CD配置')
+                if filepath == '.github/copilot-instructions.md':
+                    categories.add('AI 指南')
             elif filepath.startswith('test/') or filepath.startswith('tests/') or 'test' in filepath.lower():
                 categories.add('测试文件')
             elif filepath in ['README.md', 'LICENSE', 'CHANGELOG.md', 'CONTRIBUTING.md']:
@@ -217,42 +229,48 @@ class GitCommitAnalyzer:
                 categories.add('可执行文件')
             else:
                 categories.add('其他文件')
-            
+
             # 生成关键变更描述
-            if status in ['A', 'M']:
+            if status in ['A', 'M', 'D']:
                 key_changes.append(f"{action} {filepath}")
-        
+            elif status.startswith(('R', 'C')):
+                old_path = file_info.get('old_path')
+                if old_path and old_path != filepath:
+                    key_changes.append(f"{action} {old_path} → {filepath}")
+                else:
+                    key_changes.append(f"{action} {filepath}")
+
         analysis['categories'] = list(categories)
         analysis['key_changes'] = key_changes
-        
+
         # 生成影响摘要
         impact_parts = []
         if categories:
             impact_parts.append(f"涉及 {', '.join(categories)}")
         if len(files) > 0:
             impact_parts.append(f"共{len(files)}个文件")
-        
+
         analysis['impact_summary'] = '; '.join(impact_parts)
-        
+
         return analysis
 
     def categorize_changes(self, analyses: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
         """将提交分析结果按类别分组
-        
+
         Args:
             analyses: 提交分析结果列表
-            
+
         Returns:
             按类别分组的变更
         """
         categorized = {}
-        
+
         for analysis in analyses:
             for category in analysis['categories']:
                 if category not in categorized:
                     categorized[category] = []
                 categorized[category].append(analysis)
-        
+
         return categorized
 
     def get_all_commits(self, max_commits: int = 50) -> List[Dict[str, Any]]:
@@ -293,40 +311,40 @@ class GitCommitAnalyzer:
 
     def generate_change_summary(self, analyses: List[Dict[str, Any]], start_commit: Optional[str] = None) -> str:
         """生成智能化的变更摘要
-        
+
         Args:
             analyses: 提交分析结果列表
             start_commit: 起始提交hash（可选）
-            
+
         Returns:
             变更摘要文本
         """
         if not analyses:
             return "没有找到提交记录。"
-        
+
         summary_lines = [
             f"# Git提交历史分析报告",
             f"",
             f"**分析时间**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
             f"**提交数量**: {len(analyses)}",
         ]
-        
+
         if start_commit:
             summary_lines.append(f"**起始提交**: {start_commit}")
-        
+
         summary_lines.append("")
-        
+
         # 按类别分组
         categorized = self.categorize_changes(analyses)
-        
+
         if categorized:
             summary_lines.append("## 变更分类统计")
             summary_lines.append("")
-            
+
             for category, category_analyses in categorized.items():
                 summary_lines.append(f"### {category} ({len(category_analyses)}个提交)")
                 summary_lines.append("")
-                
+
                 for analysis in category_analyses[:3]:  # 只显示前3个，避免输出过长
                     commit = analysis['commit']
                     summary_lines.append(f"- **{commit['message']}** ({commit['hash'][:8]})")
@@ -334,17 +352,17 @@ class GitCommitAnalyzer:
                     summary_lines.append(f"  - 时间: {commit['date']}")
                     summary_lines.append(f"  - 影响: {analysis['impact_summary']}")
                     summary_lines.append("")
-                
+
                 if len(category_analyses) > 3:
                     summary_lines.append(f"  ... 还有 {len(category_analyses) - 3} 个提交")
                     summary_lines.append("")
-        
+
         # 添加详细的提交列表
         summary_lines.extend([
             "## 详细提交记录",
             ""
         ])
-        
+
         for i, analysis in enumerate(analyses, 1):
             commit = analysis['commit']
             summary_lines.extend([
@@ -356,7 +374,7 @@ class GitCommitAnalyzer:
                 f"- **影响范围**: {analysis['impact_summary']}",
                 f""
             ])
-            
+
             if commit['body'].strip():
                 summary_lines.extend([
                     "**详细描述**:",
@@ -364,7 +382,7 @@ class GitCommitAnalyzer:
                     commit['body'].strip(),
                     ""
                 ])
-            
+
             if analysis['files']:
                 summary_lines.append("**变更文件**:")
                 summary_lines.append("")
@@ -372,24 +390,24 @@ class GitCommitAnalyzer:
                     summary_lines.append(f"- {file_info['action']}: `{file_info['path']}`")
 
                 summary_lines.append("")
-        
+
         return '\n'.join(summary_lines)
 
     def analyze_repository_changes(self, start_commit: Optional[str] = None, max_commits: int = 50) -> str:
         """分析仓库变更的主入口函数
-        
+
         Args:
             start_commit: 起始提交hash，如果为None则尝试从metadata读取
             max_commits: 最大分析提交数量，防止输出过长
         """
         print("正在分析Git提交历史...")
-        
+
         # 如果没有指定起始提交，尝试从元数据加载
         if start_commit is None:
             metadata = self.load_metadata()
             if metadata:
                 start_commit = metadata.get('range_start_commit')
-        
+
         # 如果仍然没有起始提交，使用最近的一些提交
         if not start_commit:
             print("未找到起始提交，将分析最近的提交...")
@@ -404,7 +422,7 @@ class GitCommitAnalyzer:
                 else:
                     print("提交历史较少，将分析所有提交")
                     start_commit = None
-        
+
         if start_commit:
             print(f"分析从提交 {start_commit} 以来的变更...")
             # 获取提交列表
@@ -413,35 +431,35 @@ class GitCommitAnalyzer:
             print("分析所有提交历史...")
             # 获取所有提交（限制数量）
             commits = self.get_all_commits(max_commits)
-        
+
         if not commits:
             print("没有找到提交记录。")
             return "没有找到提交记录。"
-        
+
         print(f"找到 {len(commits)} 个提交，正在分析...")
-        
+
         # 分析每个提交
         analyses = []
         for commit in commits:
             files = self.get_commit_files(commit['hash'])
             analysis = self.analyze_commit_impact(commit, files)
             analyses.append(analysis)
-        
+
         # 生成摘要
         summary = self.generate_change_summary(analyses, start_commit)
-        
+
         print("分析完成！")
         return summary
 
 def main():
     """主函数"""
     import argparse
-    
+
     parser = argparse.ArgumentParser(
         description="分析Git提交历史，生成变更摘要"
     )
     parser.add_argument(
-        "--start-commit", 
+        "--start-commit",
         "-s",
         type=str,
         help="起始提交hash，如果不指定则尝试从metadata.json读取或使用最近的提交"
@@ -459,27 +477,27 @@ def main():
         type=str,
         help="输出文件路径，如果不指定则只在控制台显示"
     )
-    
+
     args = parser.parse_args()
-    
-    # 检查是否在Git仓库中
-    if not os.path.exists('.git'):
+
+    # 检查是否在Git仓库中（相对指定 repo_path）
+    if not (Path('.') / '.git').exists():
         print("错误：当前目录不是Git仓库")
         sys.exit(1)
-    
+
     analyzer = GitCommitAnalyzer()
-    
+
     try:
         summary = analyzer.analyze_repository_changes(
             start_commit=args.start_commit,
             max_commits=args.max_commits
         )
-        
+
         print("\n" + "="*50)
         print("Git提交历史分析结果:")
         print("="*50)
         print(summary)
-        
+
         # 如果指定了输出文件，则保存
         if args.output:
             output_file = Path(args.output)
@@ -487,7 +505,7 @@ def main():
             with open(output_file, 'w', encoding='utf-8') as f:
                 f.write(summary)
             print(f"\n分析结果已保存到: {output_file}")
-        
+
     except Exception as e:
         print(f"分析过程中出现错误: {e}")
         sys.exit(1)

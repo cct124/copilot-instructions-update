@@ -1,1 +1,3 @@
-.github/
+# 仅忽略本工具可能生成的临时/产出文件
+.github/latest-changes.md
+.github/copilot-instructions.metadata.json

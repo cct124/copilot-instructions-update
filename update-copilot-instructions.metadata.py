@@ -17,7 +17,7 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 
 class MetadataUpdater:
@@ -83,17 +83,25 @@ class MetadataUpdater:
     def create_updated_metadata(
         self, existing_metadata: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """创建更新后的元数据"""
+        """创建更新后的元数据，保留未识别字段，并写入 last_update 结构"""
         current_commit_info = self.get_current_commit_info()
 
         # 递增文档版本号
-        current_revision = existing_metadata.get("doc_revision", 0)
+        current_revision = int(existing_metadata.get("doc_revision", 0) or 0)
         new_revision = current_revision + 1
 
-        # 构建新的元数据
-        updated_metadata = {
-            "doc_revision": new_revision,
-            "range_start_commit": current_commit_info["commit"],
+        # 基于现有元数据进行更新（保留额外键）
+        updated_metadata: Dict[str, Any] = dict(existing_metadata)
+        updated_metadata["doc_revision"] = new_revision
+        updated_metadata["range_start_commit"] = current_commit_info["commit"]
+        updated_metadata["last_update"] = {
+            "commit": current_commit_info["commit"],
+            "author": {
+                "name": current_commit_info["author_name"],
+                "email": current_commit_info["author_email"],
+            },
+            "datetime": current_commit_info["datetime"],
+            "branch": current_commit_info["branch"],
         }
 
         return updated_metadata
@@ -106,9 +114,9 @@ class MetadataUpdater:
         try:
             with open(self.metadata_file, "w", encoding="utf-8") as f:
                 json.dump(
-                    metadata, 
-                    f, 
-                    indent=2, 
+                    metadata,
+                    f,
+                    indent=2,
                     ensure_ascii=False
                 )
             print(f"元数据已成功更新到: {self.metadata_file}")
@@ -116,7 +124,7 @@ class MetadataUpdater:
             print(f"保存元数据文件失败: {e}")
             sys.exit(1)
 
-    def update_metadata(self, commit_message: str = None) -> None:
+    def update_metadata(self, commit_message: Optional[str] = None) -> None:
         """更新元数据的主函数
 
         Args:
@@ -147,16 +155,15 @@ class MetadataUpdater:
         print("\n" + "=" * 50)
         print("元数据更新信息")
         print("=" * 50)
-
         old_revision = old_metadata.get("doc_revision", 0)
         new_revision = new_metadata["doc_revision"]
-        current_commit_info = self.get_current_commit_info()
+        last_update = new_metadata.get("last_update", {})
 
         print(f"文档版本: {old_revision} → {new_revision}")
         print(f"起始提交: {new_metadata['range_start_commit'][:8]}...")
-        print(f"更新作者: {current_commit_info['author_name']}")
-        print(f"更新时间: {current_commit_info['datetime']}")
-        print(f"当前分支: {current_commit_info['branch']}")
+        print(f"更新作者: {last_update.get('author', {}).get('name', 'N/A')}")
+        print(f"更新时间: {last_update.get('datetime', 'N/A')}")
+        print(f"当前分支: {last_update.get('branch', 'N/A')}")
 
     def create_commit(self, message: str) -> None:
         """创建一个新的提交包含元数据更新
