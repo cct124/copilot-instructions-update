@@ -95,8 +95,8 @@ class GitCommitAnalyzer:
             parts = rec.split("\x1f")
             if len(parts) < 5:
                 continue
-            hash_, author, email, date, subject = parts[:5]
-            body = parts[5] if len(parts) > 5 else ""
+            hash_, author, email, date, subject = (part.strip() for part in parts[:5])
+            body = parts[5].strip() if len(parts) > 5 else ""
             commits.append({
                 "hash": hash_,
                 "author": author,
@@ -296,8 +296,8 @@ class GitCommitAnalyzer:
             parts = rec.split("\x1f")
             if len(parts) < 5:
                 continue
-            hash_, author, email, date, subject = parts[:5]
-            body = parts[5] if len(parts) > 5 else ""
+            hash_, author, email, date, subject = (part.strip() for part in parts[:5])
+            body = parts[5].strip() if len(parts) > 5 else ""
             commits.append({
                 "hash": hash_,
                 "author": author,
